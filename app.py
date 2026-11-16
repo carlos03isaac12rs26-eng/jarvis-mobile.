@@ -24,8 +24,11 @@ api_key = st.sidebar.text_input("API Key de OpenAI", type="password")
 
 if not api_key:
     st.warning("Por favor, ingrese su API Key de OpenAI en la barra lateral para iniciar los sistemas.")
-else:
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    )
+    
 
     # Inicializar el historial de conversación con el System Prompt de JARVIS
     if "messages" not in st.session_state:
@@ -55,14 +58,14 @@ else:
             st.markdown(prompt)
 
         # Generar respuesta de JARVIS
-        with st.chat_message("assistant"):
-            with st.spinner("Analizando datos..."):
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=st.session_state.messages,
-                )
-                reply = response.choices[0].message.content
-                st.markdown(reply)
+                with st.chat_message("assistant"):
+            response = client.chat.completions.create(
+                model="gemini-2.5-flash",
+                messages=st.session_state.messages
+            )
+            reply = response.choices[0].message.content
+            st.markdown(reply)
+            
                 
                 st.session_state.messages.append({"role": "assistant", "content": reply})
 

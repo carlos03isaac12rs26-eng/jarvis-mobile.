@@ -57,7 +57,7 @@ else:
 
                 # Crear el chat con las instrucciones del sistema (Personalidad de JARVIS)
                 chat = client.chats.create(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.8-flash"
                     history=chat_history,
                     config={
                         "system_instruction": (

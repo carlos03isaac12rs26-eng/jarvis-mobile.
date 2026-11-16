@@ -1,12 +1,14 @@
 import streamlit as st
-from openai import OpenAI
+from google import genai
 
-# Configuración de la página para dispositivos móviles
+# Configuración de la página móvil
 st.set_page_config(
-    page_title="J.A.R.V.I.S. Mobile", page_icon="🤖", layout="centered"
+    page_title="JARVIS Mobile",
+    page_icon="🤖",
+    layout="centered"
 )
 
-# Estilo visual futurista / limpio
+# Estilo visual futurista
 st.markdown("""
     <style>
     .main {
@@ -19,56 +21,62 @@ st.markdown("""
 st.title("J.A.R.V.I.S. v1.0")
 st.write("Sistemas en línea. A su servicio, Señor.")
 
-# Configurar API Key
-api_key = st.sidebar.text_input("API Key de OpenAI", type="password")
+# Configurar API Key en la barra lateral
+api_key = st.sidebar.text_input("API Key de Google Gemini", type="password")
 
 if not api_key:
-    st.warning("Por favor, ingrese su API Key de OpenAI en la barra lateral para iniciar los sistemas.")
-    client = OpenAI(
-        api_key=api_key,
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-    )
-    
+    st.warning("Por favor, ingrese su API Key de Gemini en la barra lateral para iniciar los sistemas.")
+else:
+    # Inicializar el cliente oficial de Google GenAI
+    client = genai.Client(api_key=api_key)
 
-    # Inicializar el historial de conversación con el System Prompt de JARVIS
+    # Inicializar el historial de conversación en el formato nativo de Gemini
     if "messages" not in st.session_state:
-        st.session_state.messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Eres J.A.R.V.I.S. (Just A Rather Very Intelligent System), "
-                    "el asistente de inteligencia artificial avanzado. Eres formal, "
-                    "eficiente, altamente inteligente, analítico y un poco sarcástico. "
-                    "Te diriges al usuario siempre como 'Señor'. Responde de forma "
-                    "concisa y directa, ideal para dispositivos móviles."
-                ),
-            }
-        ]
+        st.session_state.messages = []
 
-    # Mostrar el historial de chat
+    # Mostrar mensajes previos en pantalla
     for message in st.session_state.messages:
-        if message["role"] != "system":
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-    # Entrada del usuario
-    if prompt := st.chat_input("¿Qué orden desea ejecutar, Señor?"):
+    # Caja de entrada para hablar con el asistente
+    if prompt := st.chat_input("Escriba su orden, Señor..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generar respuesta de JARVIS
-                with st.chat_message("assistant"):
-            response = client.chat.completions.create(
-                model="gemini-2.5-flash",
-                messages=st.session_state.messages
-            )
-            reply = response.choices[0].message.content
-            st.markdown(reply)
-            
-                
-                st.session_state.messages.append({"role": "assistant", "content": reply})
+        with st.chat_message("assistant"):
+            try:
+                # Construir el historial para la API oficial de Google
+                chat_history = []
+                for m in st.session_state.messages[:-1]:
+                    chat_history.append({
+                        "role": "user" if m["role"] == "user" else "model",
+                        "parts": [{"text": m["content"]}]
+                    })
 
-                # Reproducir respuesta con voz sintetizada
-                audio_url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={reply.replace(' ', '%20')}&tl=es&client=tw-ob"
-                st.audio(audio_url, format="audio/mp3", autoplay=True)
+                # Crear el chat con las instrucciones del sistema (Personalidad de JARVIS)
+                chat = client.chats.create(
+                    model="gemini-2.5-flash",
+                    history=chat_history,
+                    config={
+                        "system_instruction": (
+                            "Eres JARVIS (Just A Rather Very Intelligent System), "
+                            "el asistente de inteligencia artificial de Tony Stark. Eres formal, "
+                            "eficiente, altamente inteligente y ligeramente ingenioso. "
+                            "Te diriges al usuario siempre como 'Señor' y respondes de manera "
+                            "concisa y directa, ideal para lectura en dispositivos móviles."
+                        )
+                    }
+                )
+
+                # Enviar el mensaje actual
+                response = chat.send_message(prompt)
+                reply = response.text
+                
+                st.markdown(reply)
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+                
+            except Exception as e:
+                st.error(f"Error de sistema: {e}")
+                
